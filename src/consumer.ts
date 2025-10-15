@@ -144,6 +144,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                 count: batch.count,
                 streams: [{ key: stream, id: ">" }],
             });
+            log.debug("xreadgroup", { stream, group, inFlight, res });
             if (!res || res.length === 0) continue;
 
             for (const part of res) {

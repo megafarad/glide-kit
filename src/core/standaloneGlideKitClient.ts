@@ -46,6 +46,8 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             block: blockMs,
             count,
         });
+        console.debug("xreadgroup result", result);
+
         if (!result) return null;
         const out: XReadGroupResult = [];
         for (const [stream, arr] of Object.entries(result)) {
