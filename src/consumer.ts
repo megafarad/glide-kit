@@ -159,6 +159,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
     return {
         async setup() {
+            log.debug("setup", { stream, group, consumer });
             await ensureGroup();
         },
         async start() {
