@@ -133,11 +133,15 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function loop() {
-        const ensureGroupResult = await ensureGroup();
-        log.debug("ensureGroup", { stream, group, result: ensureGroupResult });
+        await ensureGroup();
 
         while (running) {
             log.debug("loop", { stream, group, inFlight });
+
+            const infoGroups = await client.xinfoGroups(stream).catch(() => []);
+
+            log.debug("infoGroups", { stream, group, infoGroups });
+
             const res = await client.xreadgroup({
                 group,
                 consumer,
