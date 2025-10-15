@@ -41,12 +41,13 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             keysAndIds[stream.key] = stream.id;
         }
 
+        console.log(keysAndIds);
+
         const client = await this.createdClient;
         const result = await client.xreadgroup(group, consumer, keysAndIds, {
             block: blockMs,
             count,
         });
-        console.debug("xreadgroup result", result);
 
         if (!result) return null;
         const out: XReadGroupResult = [];
