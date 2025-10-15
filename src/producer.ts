@@ -1,4 +1,4 @@
-import {Codec, Envelope, IdempotencyCache, MessageHeaders, IGlideKitClient} from "./core/types.js";
+import {Codec, Envelope, IdempotencyCache, MessageHeaders, IGlideKitClient, LoggerLike} from "./core/types.js";
 
 export type MakeProducerOpts<T> = {
     client: IGlideKitClient;
@@ -6,6 +6,7 @@ export type MakeProducerOpts<T> = {
     codec: Codec<T>;
     defaultType?: string;
     idempotency?: { cache: IdempotencyCache; ttlSec: number };
+    log?: LoggerLike;
 };
 
 export interface Producer<T> {
@@ -13,7 +14,7 @@ export interface Producer<T> {
 }
 
 export function makeProducer<T>(opts: MakeProducerOpts<T>): Producer<T> {
-    const { client, stream, codec, defaultType } = opts;
+    const { client, stream, codec, defaultType, log } = opts;
 
     return {
         async send(payload, sendOpts) {
@@ -36,6 +37,7 @@ export function makeProducer<T>(opts: MakeProducerOpts<T>): Producer<T> {
             }
 
             const env: Envelope<T> = { headers, payload };
+            log?.debug("send", { stream, type: headers.type, key: headers.key });
             return await client.xadd(stream, codec.encode(env));
         },
     };

@@ -33,7 +33,8 @@ describe('Integration', async () => {
             client,
             stream: "test",
             codec: jsonCodec<TestJob>(),
-            defaultType: "test.set"
+            defaultType: "test.set",
+            log: consoleLogger
         });
 
         const worker = makeConsumer({
@@ -47,6 +48,7 @@ describe('Integration', async () => {
                 strategy: { kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
             }),
             handler: async (job) => {
+                console.log("handler", job);
                 testFn(job);
             },
             log: consoleLogger
