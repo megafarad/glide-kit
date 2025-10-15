@@ -1,0 +1,22 @@
+{
+  "name": "glide-kit",
+  "version": "0.1.0",
+  "description": "A simple library of abstractions for Valkey Glide - batteries included.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "author": "Chris Carrington <chris@megafarad.com> (https://megafarad.com)",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@valkey/valkey-glide": "^2.1.1",
+    "dotenv": "^17.2.3"
+  }
+}
