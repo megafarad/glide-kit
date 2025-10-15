@@ -28,7 +28,9 @@ export type MakeConsumerOpts<T> = {
 
 export interface ConsumerWorker<T> {
     setup(): Promise<void>;
+
     start(): Promise<void>;
+
     stop(opts?: { drain?: boolean; timeoutMs?: number }): Promise<void>;
 }
 
@@ -40,8 +42,8 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         consumer,
         codec,
         handler,
-        batch = { count: 16, blockMs: 2000 },
-        scheduling = { mode: "zset" },
+        batch = {count: 16, blockMs: 2000},
+        scheduling = {mode: "zset"},
         log = noopLogger,
     } = opts;
 
@@ -53,10 +55,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         const groupCreated = groups.some(record => record['name'] === group);
         if (groupCreated) return;
         return await client.xgroupCreate(stream, group, "$", {
-            mkstream: true,
+            mkStream: true
         }).catch((e) => {
             const msg = e instanceof Error ? e.message : String(e);
-            console.log("xgroupCreate error", msg);
             if (msg.includes("BUSYGROUP")) return;
             throw e;
         });
@@ -65,13 +66,13 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     async function processMessage(id: string, fields: Record<string, string>) {
         try {
             const env = codec.decode(fields);
-            const res = (await handler(env.payload, { headers: env.headers, id })) || {
+            const res = (await handler(env.payload, {headers: env.headers, id})) || {
                 action: "ack",
             };
 
             if (res.action === "ack") {
                 await client.xack(stream, group, [id]);
-                log.debug("ack", { stream, group, id, type: env.headers.type });
+                log.debug("ack", {stream, group, id, type: env.headers.type});
                 return;
             }
 
@@ -89,9 +90,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
                 if (scheduling.mode === "zset" && client.zadd) {
                     const retryKey = opts.scheduling?.retryZset || `${stream}:retry`;
-                    const member = JSON.stringify({ stream, env: nextEnv });
+                    const member = JSON.stringify({stream, env: nextEnv});
                     await client.zadd(retryKey, [
-                        { score: Date.now() + delay, member },
+                        {score: Date.now() + delay, member},
                     ]);
                 } else {
                     // immediate requeue fallback
@@ -111,10 +112,10 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             if (res.action === "dlq") {
                 const dlqStream = `${stream}:dlq`;
                 const dlqPayload = {
-                    headers: { ...env.headers },
+                    headers: {...env.headers},
                     payload: env.payload,
-                    error: { reason: res.reason, meta: res.meta },
-                    handledBy: { group, consumer },
+                    error: {reason: res.reason, meta: res.meta},
+                    handledBy: {group, consumer},
                 };
                 await client.xadd(dlqStream, {
                     headers: JSON.stringify(dlqPayload.headers),
@@ -123,12 +124,12 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                     handledBy: JSON.stringify(dlqPayload.handledBy),
                 });
                 await client.xack(stream, group, [id]);
-                log.warn("dlq", { stream, group, id, reason: res.reason });
+                log.warn("dlq", {stream, group, id, reason: res.reason});
                 return;
             }
         } catch (err) {
             // Last-chance handler error → schedule retry with policy based on a synthetic envelope
-            log.error("handler exception", { stream, group, id, err });
+            log.error("handler exception", {stream, group, id, err});
             // Naive: ack to avoid tight loop; caller should rely on idle sweeper for robustness
             await client.xack(stream, group, [id]);
         }
@@ -141,10 +142,10 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                 consumer,
                 blockMs: batch.blockMs,
                 count: batch.count,
-                streams: [{ key: stream, id: ">" }],
+                streams: [{key: stream, id: ">"}],
             });
 
-            log.debug("xreadgroup", { stream, group, count: res?.length });
+            log.debug("xreadgroup", {stream, group, count: res?.length});
 
             if (!res || res.length === 0) continue;
 
@@ -160,7 +161,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
     return {
         async setup() {
-            log.debug("setup", { stream, group, consumer });
+            log.debug("setup", {stream, group, consumer});
             await ensureGroup();
         },
         async start() {
@@ -169,7 +170,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             // Fire-and-forget; if you prefer, you can manage the promise outside
             void loop();
         },
-        async stop({ drain = true, timeoutMs = 10_000 } = {}) {
+        async stop({drain = true, timeoutMs = 10_000} = {}) {
             if (!running) return;
             if (!drain) {
                 running = false;

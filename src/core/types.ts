@@ -80,7 +80,7 @@ export interface IGlideKitClient {
         key: string,
         group: string,
         id: string,
-        opts?: { mkstream?: boolean, entriesRead?: string }
+        opts?: { mkStream?: boolean, entriesRead?: string }
     ) => Promise<string>;
 
     // Optional helpers for retries (ZSET based scheduler)

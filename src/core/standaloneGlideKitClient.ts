@@ -117,7 +117,7 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
     }
 
     async xgroupCreate(key: string, group: string, id: string, opts: {
-        mkstream?: boolean;
+        mkStream?: boolean;
         entriesRead?: string
     } | undefined): Promise<string> {
         const client = await this.createdClient;
