@@ -33,4 +33,7 @@ jobs:
 
       - name: Run tests
         run: npm test
+        env:
+          VALKEY_HOST: localhost
+          VALKEY_PORT: 6379
 
