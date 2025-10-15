@@ -51,7 +51,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         const groups = await client.xinfoGroups(stream).catch(() => []);
         const groupCreated = groups.some(record => record['name'] === group);
         if (groupCreated) return;
-        await client.xgroupCreate(stream, group, "$", {
+        return await client.xgroupCreate(stream, group, "$", {
             mkstream: true,
         }).catch((e) => {
             const msg = e instanceof Error ? e.message : String(e);
@@ -133,7 +133,8 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function loop() {
-        await ensureGroup();
+        const ensureGroupResult = await ensureGroup();
+        log.debug("ensureGroup", { stream, group, result: ensureGroupResult });
 
         while (running) {
             log.debug("loop", { stream, group, inFlight });
