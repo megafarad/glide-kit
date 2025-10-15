@@ -48,7 +48,6 @@ describe('Integration', async () => {
                 strategy: { kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
             }),
             handler: async (job) => {
-                console.log("handler", job);
                 testFn(job);
             },
             log: consoleLogger
@@ -56,11 +55,12 @@ describe('Integration', async () => {
 
         const job = {value: "hello world"};
 
-        await producer.send(job);
+        const id = await producer.send(job);
+        console.log("sent", id);
         await worker.start();
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 
-    });
+    }, 10_000);
 
 })
