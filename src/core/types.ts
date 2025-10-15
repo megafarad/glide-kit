@@ -45,6 +45,11 @@ export const noopLogger: LoggerLike = {
     },
 };
 
+export enum Decoder {
+    Bytes = 0,
+    String = 1
+}
+
 export interface IGlideKitClient {
     xadd: (
         stream: string,
@@ -61,6 +66,15 @@ export interface IGlideKitClient {
         count: number;
         streams: { key: string; id: ">" }[]; // we only read new entries in this skeleton
     }) => Promise<XReadGroupResult | null>;
+
+    xinfoGroups: (key: string, options?: {decoder?: Decoder}) => Promise<Record<string, number | string | null>[]>;
+
+    xgroupCreate: (
+        key: string,
+        group: string,
+        id: string,
+        opts?: { mkstream?: boolean, entriesRead?: string }
+    ) => Promise<string>;
 
     // Optional helpers for retries (ZSET based scheduler)
     zadd?: (

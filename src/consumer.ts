@@ -47,6 +47,19 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     let running = false;
     let inFlight = 0;
 
+    async function ensureGroup() {
+        const groups = await client.xinfoGroups(stream).catch(() => []);
+        const groupCreated = groups.some(record => record['name'] === group);
+        if (groupCreated) return;
+        await client.xgroupCreate(stream, group, "$", {
+            mkstream: true,
+        }).catch((e) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg.includes("BUSYGROUP")) return;
+            throw e;
+        });
+    }
+
     async function processMessage(id: string, fields: Record<string, string>) {
         try {
             const env = codec.decode(fields);
@@ -120,6 +133,8 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function loop() {
+        await ensureGroup();
+
         while (running) {
             const res = await client.xreadgroup({
                 group,

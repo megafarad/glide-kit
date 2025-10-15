@@ -1,4 +1,4 @@
-import {IGlideKitClient, XReadGroupResult} from "./types.js";
+import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
 import {GlideClient, GlideClientConfiguration} from "@valkey/valkey-glide";
 
 export class StandaloneGlideKitClient implements IGlideKitClient {
@@ -113,6 +113,34 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             const score = entry.score;
             return {member, score};
         });
+    }
+
+    async xgroupCreate(key: string, group: string, id: string, opts: {
+        mkstream?: boolean;
+        entriesRead?: string
+    } | undefined): Promise<string> {
+        const client = await this.createdClient;
+         return  client.xgroupCreate(key, group, id, opts);
+    }
+
+    async xinfoGroups(key: string, options?: {decoder?: Decoder}): Promise<Record<string, number | string | null>[]> {
+        const client = await this.createdClient;
+        const infoGroups = await client.xinfoGroups(key, options);
+        const result: Record<string, number | string | null>[] = [];
+        for (const infoGroup of infoGroups) {
+            const returnedInfo: Record<string, number | string | null> = {};
+            Object.entries(infoGroup).forEach(([infoKey, infoValue]) => {
+                if (Buffer.isBuffer(infoValue) && this.encoding) {
+                    returnedInfo[infoKey] = infoValue.toString(this.encoding);
+                } else if (Buffer.isBuffer(infoValue)) {
+                    returnedInfo[infoKey] = infoValue.toString();
+                } else if (typeof infoValue === "number" || typeof infoValue === "string" || infoValue === null) {
+                    returnedInfo[infoKey] = infoValue
+                }
+            });
+            result.push(returnedInfo);
+        }
+        return result;
     }
 
 }
