@@ -56,6 +56,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             mkstream: true,
         }).catch((e) => {
             const msg = e instanceof Error ? e.message : String(e);
+            console.log("xgroupCreate error", msg);
             if (msg.includes("BUSYGROUP")) return;
             throw e;
         });
