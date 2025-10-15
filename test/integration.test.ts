@@ -45,7 +45,7 @@ describe('Integration', async () => {
             codec: jsonCodec<TestJob>(),
             retryPolicy: backoffPolicy({
                 maxAttempts: 5,
-                strategy: { kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
+                strategy: {kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
             }),
             handler: async (job) => {
                 testFn(job);
@@ -55,9 +55,13 @@ describe('Integration', async () => {
 
         const job = {value: "hello world"};
 
-        const id = await producer.send(job);
-        console.log("sent", id);
+        await producer.send(job);
         await worker.start();
+
+        client.xinfoGroups('test').then(groups => {
+                console.log(groups)
+            }
+        )
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 

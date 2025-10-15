@@ -41,8 +41,6 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             keysAndIds[stream.key] = stream.id;
         }
 
-        console.log(keysAndIds);
-
         const client = await this.createdClient;
         const result = await client.xreadgroup(group, consumer, keysAndIds, {
             block: blockMs,
@@ -123,10 +121,10 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
         entriesRead?: string
     } | undefined): Promise<string> {
         const client = await this.createdClient;
-         return  client.xgroupCreate(key, group, id, opts);
+        return client.xgroupCreate(key, group, id, opts);
     }
 
-    async xinfoGroups(key: string, options?: {decoder?: Decoder}): Promise<Record<string, number | string | null>[]> {
+    async xinfoGroups(key: string, options?: { decoder?: Decoder }): Promise<Record<string, number | string | null>[]> {
         const client = await this.createdClient;
         const infoGroups = await client.xinfoGroups(key, options);
         const result: Record<string, number | string | null>[] = [];
