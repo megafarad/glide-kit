@@ -55,13 +55,8 @@ describe('Integration', async () => {
 
         const job = {value: "hello world"};
 
-        await producer.send(job);
         await worker.start();
-
-        client.xinfoGroups('test').then(groups => {
-                console.log(groups)
-            }
-        )
+        await producer.send(job);
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 
