@@ -27,6 +27,7 @@ export type MakeConsumerOpts<T> = {
 };
 
 export interface ConsumerWorker<T> {
+    setup(): Promise<void>;
     start(): Promise<void>;
     stop(opts?: { drain?: boolean; timeoutMs?: number }): Promise<void>;
 }
@@ -133,8 +134,6 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function loop() {
-        await ensureGroup();
-
         while (running) {
             const res = await client.xreadgroup({
                 group,
@@ -159,6 +158,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     return {
+        async setup() {
+            await ensureGroup();
+        },
         async start() {
             if (running) return;
             running = true;
