@@ -45,6 +45,13 @@ export const noopLogger: LoggerLike = {
     },
 };
 
+export const consoleLogger: LoggerLike = {
+    debug: console.debug,
+    info: console.info,
+    warn: console.warn,
+    error: console.error,
+};
+
 export enum Decoder {
     Bytes = 0,
     String = 1

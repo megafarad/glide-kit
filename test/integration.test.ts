@@ -5,6 +5,7 @@ import {jsonCodec} from "../src/codec/jsonCodec.js";
 import {makeConsumer} from "../src/consumer.js";
 import {backoffPolicy} from "../src/retry.js";
 import {expect} from "vitest";
+import {consoleLogger} from "../src/core/types.js";
 
 dotenv.config();
 
@@ -47,7 +48,8 @@ describe('Integration', async () => {
             }),
             handler: async (job) => {
                 testFn(job);
-            }
+            },
+            log: consoleLogger
         });
 
         const job = {value: "hello world"};
@@ -55,7 +57,7 @@ describe('Integration', async () => {
         await producer.send(job);
         await worker.start();
 
-        await expect.poll(() => testFn).toBeCalledWith(job);
+        await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 
     });
 

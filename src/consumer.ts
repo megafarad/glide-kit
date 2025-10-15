@@ -136,6 +136,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         await ensureGroup();
 
         while (running) {
+            log.debug("loop", { stream, group, inFlight });
             const res = await client.xreadgroup({
                 group,
                 consumer,
