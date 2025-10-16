@@ -1,5 +1,5 @@
 {
-  "name": "glide-kit",
+  "name": "@sirhc77/glide-kit",
   "version": "0.1.0",
   "description": "A simple library of abstractions for Valkey Glide - batteries included.",
   "type": "module",
