@@ -151,7 +151,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             if (!res || res.length === 0) continue;
 
             for (const part of res) {
+                log.debug("xreadgroup.part", {stream, group, count: part.messages.length});
                 for (const msg of part.messages) {
+                    log.debug("xreadgroup.msg", {stream, group, id: msg.id});
                     inFlight++;
                     await processMessage(msg.id, msg.fields);
                     inFlight--;
