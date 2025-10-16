@@ -92,9 +92,11 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                     payload: env.payload,
                 };
 
+                const fields = codec.encode(nextEnv);
+
                 if (scheduling.mode === "zset" && client.zadd) {
                     const retryKey = opts.scheduling?.retryZset || `${stream}:retry`;
-                    const member = JSON.stringify({stream, env: nextEnv});
+                    const member = JSON.stringify({stream, fields});
                     await client.zadd(retryKey, [
                         {score: Date.now() + delay, member},
                     ]);
