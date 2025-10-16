@@ -60,6 +60,8 @@ describe('Integration', async () => {
         });
         await producer.send(job).then(() => {
             console.log("job sent");
+        }).catch((e) => {
+            console.error("job send error", e);
         });
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
