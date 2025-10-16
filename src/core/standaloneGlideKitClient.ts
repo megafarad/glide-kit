@@ -1,5 +1,5 @@
 import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
-import {GlideClient, GlideClientConfiguration} from "@valkey/valkey-glide";
+import {GlideClient, GlideClientConfiguration, GlideString} from "@valkey/valkey-glide";
 
 export class StandaloneGlideKitClient implements IGlideKitClient {
 
@@ -21,8 +21,7 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
         const values: [string, string][] = Object.entries(fields).map(([k, v]) => [k, v]);
         const result = await client.xadd(stream, values, opts);
         if (result) {
-            if (Buffer.isBuffer(result) && this.encoding) result.toString(this.encoding)
-            return result.toString();
+            return this.convertGlideString(result);
         } else {
             return null;
         }
@@ -47,54 +46,19 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             count,
         });
 
-        console.debug("xreadgroup", JSON.stringify(result, null, 2));
-
         if (!result) return null;
         const out: XReadGroupResult = [];
-        for (const [stream, arr] of Object.entries(result)) {
-            const messages: Array<{ id: string; fields: Record<string, string> }> = [];
-            if (Array.isArray(arr)) {
-                for (const tuple of arr as any[]) {
-                    const id: string = String(tuple[0]);
-                    const raw = tuple[1];
-                    let fields: Record<string, string> = {};
-
-
-                    if (typeof raw === "string") {
-                        // Try to parse JSON-encoded fields
-                        try {
-                            const obj = JSON.parse(raw);
-                            if (obj && typeof obj === "object") {
-                                for (const [k, v] of Object.entries(obj as Record<string, any>)) {
-                                    fields[k] = String(v);
-                                }
-                            }
-                        } catch (_) {
-                            // Fallback: store as single field "payload"
-                            fields = {payload: raw};
-                        }
-                    } else if (Array.isArray(raw)) {
-                        // Flat [f1,v1,f2,v2,...]
-                        for (let i = 0; i < raw.length; i += 2) {
-                            const k = String(raw[i]);
-                            fields[k] = String(raw[i + 1] ?? "");
-                        }
-                    } else if (raw && typeof raw === "object") {
-                        // Already an object map
-                        for (const [k, v] of Object.entries(raw as Record<string, any>)) {
-                            fields[k] = String(v);
-                        }
-                    } else {
-                        // Unknown; preserve as stringy payload
-                        fields = {payload: String(raw)};
-                    }
-
-
-                    messages.push({id, fields});
-                }
-            }
-            out.push({stream, messages});
-        }
+        result.forEach(({key, value}) => {
+            const keyString = this.convertGlideString(key);
+            Object.entries(value).forEach(([id, fields]) => {
+                const messageFields: Record<string, string> = {};
+                fields?.forEach(([fieldName, fieldValue]) => {
+                    const fieldNameString = this.convertGlideString(fieldName);
+                    messageFields[fieldNameString] = this.convertGlideString(fieldValue);
+                });
+                out.push({stream: keyString, messages: [{id, fields: messageFields}]});
+            })
+        });
         return out;
     }
 
@@ -111,8 +75,7 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
         const client = await this.createdClient;
         const result = await client.zpopmin(key);
         return result.map(entry => {
-            const member = Buffer.isBuffer(entry.element) && this.encoding ?
-                entry.element.toString(this.encoding) : entry.element.toString();
+            const member = this.convertGlideString(entry.element);
             const score = entry.score;
             return {member, score};
         });
@@ -144,6 +107,10 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             result.push(returnedInfo);
         }
         return result;
+    }
+
+    private convertGlideString(string: GlideString) {
+        return Buffer.isBuffer(string) && this.encoding ? string.toString(this.encoding) : string.toString();
     }
 
 }
