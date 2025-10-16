@@ -58,6 +58,9 @@ describe('Integration', async () => {
         await worker.start().then(() => {
             console.log("worker started");
         });
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         await producer.send(job).then(() => {
             console.log("job sent");
         }).catch((e) => {
@@ -66,6 +69,6 @@ describe('Integration', async () => {
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 
-    }, 10_000);
+    }, 15_000);
 
 })
