@@ -6,6 +6,10 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sirhc77/glide-kit.git"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
