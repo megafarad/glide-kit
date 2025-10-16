@@ -141,13 +141,13 @@ describe('Integration', async () => {
 
         await expect.poll(async () => testFn, {timeout: 30_000}).toBeCalledTimes(2);
 
-        expect.poll(async () => {
+        await expect.poll(async () => {
             return await client.xlen("test:dlq");
         }, {timeout: 30_000}).toBe(1);
 
         await worker.stop();
         await daemon.stop();
 
-    });
+    }, 60_000);
 
 });
