@@ -8,7 +8,7 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sirhc77/glide-kit"
+    "url": "https://github.com/megafarad/glide-kit"
   },
   "exports": {
     ".": {
