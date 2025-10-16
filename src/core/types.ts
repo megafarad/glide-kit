@@ -83,6 +83,8 @@ export interface GlideKitClient {
         opts?: { mkStream?: boolean, entriesRead?: string }
     ) => Promise<string>;
 
+    xlen: (key: string) => Promise<number>;
+
     // Optional helpers for retries (ZSET based scheduler)
     zadd?: (
         key: string,

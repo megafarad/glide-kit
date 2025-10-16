@@ -62,6 +62,11 @@ export class StandaloneGlideKitClient implements GlideKitClient {
         return out;
     }
 
+    async xlen(key: string): Promise<number> {
+        const client = await this.createdClient;
+        return await client.xlen(key);
+    }
+
     async zadd(key: string, scoreMembers: Array<{ score: number; member: string }>): Promise<number> {
         const client = await this.createdClient;
         const membersAndScores: Record<string, number> = {};
