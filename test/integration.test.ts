@@ -22,7 +22,8 @@ describe('Integration', async () => {
                     host: process.env.VALKEY_HOST,
                     port: Number(process.env.VALKEY_PORT)
                 }
-            ]
+            ],
+            requestTimeout: 10_000,
         });
 
         interface TestJob {
