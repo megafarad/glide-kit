@@ -1,20 +1,31 @@
-import {StandaloneGlideKitClient} from "../src/core/standaloneGlideKitClient.js";
+import {
+    backoffPolicy,
+    consoleLogger,
+    jsonCodec,
+    makeConsumer,
+    makeProducer,
+    startRetryDaemon,
+    StandaloneGlideKitClient
+} from "../src";
 import dotenv from "dotenv";
-import {makeProducer} from "../src/producer.js";
-import {jsonCodec} from "../src/codec/jsonCodec.js";
-import {makeConsumer} from "../src/consumer.js";
-import {backoffPolicy} from "../src/retry.js";
 import {expect} from "vitest";
-import {consoleLogger} from "../src/core/types.js";
 
 dotenv.config();
+
+interface TestJob {
+    value: string;
+}
+
 
 describe('Integration', async () => {
     it('should work end-to-end', async () => {
         if (!process.env.VALKEY_HOST) throw new Error("VALKEY_HOST not set");
         if (!process.env.VALKEY_PORT) throw new Error("VALKEY_PORT not set");
 
-        const testFn = vi.fn()
+        const testFn = vi.fn((_job: TestJob) => Promise.resolve());
+        testFn.mockRejectedValueOnce(new Error("test error"));
+        testFn.mockRejectedValueOnce(new Error("test error 2"));
+        testFn.mockResolvedValue()
 
         const client = new StandaloneGlideKitClient({
             addresses: [
@@ -25,10 +36,6 @@ describe('Integration', async () => {
             ],
             requestTimeout: 10_000,
         });
-
-        interface TestJob {
-            value: string;
-        }
 
         const producer = makeProducer<TestJob>({
             client,
@@ -49,7 +56,7 @@ describe('Integration', async () => {
                 strategy: {kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
             }),
             handler: async (job) => {
-                testFn(job);
+                await testFn(job);
             },
             log: consoleLogger
         });
@@ -60,7 +67,14 @@ describe('Integration', async () => {
             console.log("worker started");
         });
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const daemon = startRetryDaemon({
+            client,
+            retryZset: "test:retry",
+            targetStream: "test",
+            log: consoleLogger
+        });
+
+        daemon.start();
 
         await producer.send(job).then(() => {
             console.log("job sent");
@@ -68,7 +82,7 @@ describe('Integration', async () => {
             console.error("job send error", e);
         });
 
-        await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
+        await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledTimes(3);
 
     }, 15_000);
 

@@ -1,7 +1,7 @@
-import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
+import {Decoder, GlideKitClient, XReadGroupResult} from "./types.js";
 import {GlideClient, GlideClientConfiguration, GlideString} from "@valkey/valkey-glide";
 
-export class StandaloneGlideKitClient implements IGlideKitClient {
+export class StandaloneGlideKitClient implements GlideKitClient {
 
     private readonly createdClient: Promise<GlideClient>;
 
@@ -79,6 +79,27 @@ export class StandaloneGlideKitClient implements IGlideKitClient {
             const score = entry.score;
             return {member, score};
         });
+    }
+
+    async zrangebyscore(
+        key: string,
+        min: number,
+        max: number,
+        opts?: { limit?: number }
+    ): Promise<Array<{ score: number; member: string }>> {
+        const client = await this.createdClient;
+        const limit = opts?.limit ? {count: opts.limit, offset: 0} : undefined;
+        const result = await client.zrangeWithScores(key, {start: min, end: max, limit});
+        return result.map(entry => {
+            const member = this.convertGlideString(entry.element);
+            const score = entry.score;
+            return {member, score};
+        });
+    }
+
+    async zrem(key: string, members: string[]): Promise<number> {
+        const client = await this.createdClient;
+        return await client.zrem(key, members);
     }
 
     async xgroupCreate(key: string, group: string, id: string, opts: {

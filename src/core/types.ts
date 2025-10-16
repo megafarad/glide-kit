@@ -57,7 +57,7 @@ export enum Decoder {
     String = 1
 }
 
-export interface IGlideKitClient {
+export interface GlideKitClient {
     xadd: (
         stream: string,
         fields: Record<string, string>,
@@ -90,6 +90,16 @@ export interface IGlideKitClient {
     ) => Promise<number>;
 
     zpopmin?: (key: string) => Promise<Array<{ score: number; member: string }>>;
+
+    zrangebyscore?: (
+        key: string,
+        min: number,
+        max: number,
+        opts?: { limit?: number }
+    ) => Promise<Array<{ score: number; member: string }>>;
+
+    zrem?: (key: string, members: string[]) => Promise<number>;
+
 }
 
 export type IdempotencyCache = {

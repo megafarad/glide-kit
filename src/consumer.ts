@@ -4,7 +4,7 @@ import {
     LoggerLike,
     RetryPolicy,
     RetryResult,
-    IGlideKitClient,
+    GlideKitClient,
     noopLogger,
 } from "./core/types.js";
 
@@ -14,7 +14,7 @@ export type Handler<T> = (
 ) => Promise<RetryResult | void>;
 
 export type MakeConsumerOpts<T> = {
-    client: IGlideKitClient;
+    client: GlideKitClient;
     stream: string;
     group: string;
     consumer: string;
@@ -39,6 +39,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         group,
         consumer,
         codec,
+        retryPolicy,
         handler,
         batch = {count: 16, blockMs: 2000},
         scheduling = {mode: "zset"},
@@ -65,7 +66,11 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         log.debug("processMessage", {stream, group, id, type: fields.headers_type});
         try {
             const env = codec.decode(fields);
-            const res = (await handler(env.payload, {headers: env.headers, id})) || {
+            const handlerResult = await handler(env.payload, {headers: env.headers, id})
+                .catch((e) => {
+                    return retryPolicy.next(env.headers, e);
+                });
+            const res = handlerResult || {
                 action: "ack",
             };
 
