@@ -33,6 +33,12 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Review NPM Version
+        run: npm --version
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm install
 
