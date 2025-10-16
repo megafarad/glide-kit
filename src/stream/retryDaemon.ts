@@ -69,6 +69,7 @@ export function startRetryDaemon(opts: RetryDaemonOpts): RetryDaemon {
 
         for (const { member } of ready) {
             try {
+                log.debug("member: ", member);
                 const parsed = JSON.parse(member) as { stream: string; fields: Record<string, string> };
                 const dest = parsed.stream || targetStream;
                 await client.xadd(dest, parsed.fields);

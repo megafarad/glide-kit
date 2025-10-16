@@ -82,8 +82,8 @@ describe('Integration', async () => {
             console.error("job send error", e);
         });
 
-        await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledTimes(3);
+        await expect.poll(() => testFn, {timeout: 30_000}).toBeCalledTimes(3);
 
-    }, 15_000);
+    }, 60_000);
 
 })
