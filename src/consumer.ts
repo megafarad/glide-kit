@@ -135,7 +135,6 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function loop() {
-        await ensureGroup();
 
         while (running) {
             const res = await client.xreadgroup({
@@ -166,6 +165,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         async start() {
             if (running) return;
             running = true;
+            await ensureGroup();
             // Fire-and-forget; if you prefer, you can manage the promise outside
             void loop();
         },
