@@ -64,6 +64,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     }
 
     async function processMessage(id: string, fields: Record<string, string>) {
+        log.debug("processMessage", {stream, group, id, type: fields.headers_type});
         try {
             const env = codec.decode(fields);
             const res = (await handler(env.payload, {headers: env.headers, id})) || {
