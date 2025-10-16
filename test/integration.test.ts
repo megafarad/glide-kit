@@ -55,7 +55,6 @@ describe('Integration', async () => {
 
         const job = {value: "hello world"};
 
-        await worker.setup();
         await producer.send(job);
         await worker.start();
 
