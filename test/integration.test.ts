@@ -55,8 +55,12 @@ describe('Integration', async () => {
 
         const job = {value: "hello world"};
 
-        await worker.start();
-        await producer.send(job);
+        await worker.start().then(() => {
+            console.log("worker started");
+        });
+        await producer.send(job).then(() => {
+            console.log("job sent");
+        });
 
         await expect.poll(() => testFn, {timeout: 10_000}).toBeCalledWith(job);
 
