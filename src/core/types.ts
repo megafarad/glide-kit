@@ -86,24 +86,19 @@ export interface GlideKitClient {
     xlen: (key: string) => Promise<number>;
 
     xpending?: (
-        key: string,
+        stream: string,
         group: string,
-        opts: {
-            idle: number;
-            count: number;
-            start: string;
-            end: string;
-        }
-    ) => Promise<{ id: string; consumer: string }[]>;
+        opts: { idle: number; count: number; start: string; end: string }
+    ) => Promise<Array<{ id: string; consumer: string; idle: number; deliveries: number }>>;
 
     xclaim?: (
-        key: string,
+        stream: string,
         group: string,
         consumer: string,
         minIdleMs: number,
         ids: string[],
-        opts?: { retrycount?: number; force?: boolean }
-    ) => Promise<string[]>;
+        opts?: { retrycount?: number }
+    ) => Promise<Array<{ id: string; fields: Record<string, string> }>>;
 
     // Optional helpers for retries (ZSET based scheduler)
     zadd?: (

@@ -151,7 +151,7 @@ export class StandaloneGlideKitClient implements GlideKitClient {
             start: string;
             end: string;
         }
-    ): Promise<{ id: string; consumer: string }[]> {
+    ): Promise<Array<{ id: string; consumer: string; idle: number; deliveries: number }>> {
         const client = await this.createdClient;
         const start = this.convertStringToBoundary(opts.start);
         const end = this.convertStringToBoundary(opts.end);
@@ -161,11 +161,13 @@ export class StandaloneGlideKitClient implements GlideKitClient {
             start,
             end
         });
-        const out: { id: string; consumer: string }[] = [];
+        const out: { id: string; consumer: string, idle: number, deliveries: number }[] = [];
         for (const entry of result) {
             const id = this.convertGlideString(entry[0]);
             const consumer = this.convertGlideString(entry[1]);
-            out.push({id, consumer});
+            const idle = entry[2];
+            const deliveries = entry[3];
+            out.push({id, consumer, idle, deliveries});
         }
         return out;
     }
@@ -175,14 +177,23 @@ export class StandaloneGlideKitClient implements GlideKitClient {
                  consumer: string,
                  minIdleMs: number,
                  ids: string[],
-                 opts?: { retrycount?: number; force?: boolean }): Promise<string[]> {
+                 opts?: { retrycount?: number; force?: boolean }): Promise<Array<{ id: string; fields: Record<string, string> }>> {
         const client = await this.createdClient;
         const xclaimOpts: StreamClaimOptions | undefined = opts ? {
             retryCount: opts.retrycount,
             isForce: opts.force,
         } : undefined;
         const result = await client.xclaim(key, group, consumer, minIdleMs, ids, xclaimOpts);
-        return Object.keys(result);
+        const out: { id: string; fields: Record<string, string> }[] = [];
+        for (const entry of Object.entries(result)) {
+            const fields: Record<string, string> = {};
+            for (const [fieldName, fieldValue] of entry[1]) {
+                const fieldNameString = this.convertGlideString(fieldName);
+                fields[fieldNameString] = this.convertGlideString(fieldValue);
+            }
+            out.push({id: entry[0], fields});
+        }
+        return out;
     }
 
     private convertGlideString(string: GlideString) {

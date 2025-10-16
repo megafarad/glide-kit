@@ -24,6 +24,12 @@ export type MakeConsumerOpts<T> = {
     scheduling?: { mode: "zset" | "none"; retryZset?: string };
     batch?: { count: number; blockMs: number };
     log?: LoggerLike;
+    pelClaim?: {
+        enabled?: boolean;        // default true
+        minIdleMs: number;        // older than this is eligible
+        maxPerTick?: number;      // default 128
+        intervalMs?: number;      // default 1000
+    };
 };
 
 export interface ConsumerWorker<T> {
@@ -44,10 +50,12 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         batch = {count: 16, blockMs: 2000},
         scheduling = {mode: "zset"},
         log = noopLogger,
+        pelClaim
     } = opts;
 
     let running = false;
     let inFlight = 0;
+    let claimLoopPromise: Promise<void> | null = null;
 
     async function ensureGroup() {
         const groups = await client.xinfoGroups(stream).catch(() => []);
@@ -141,6 +149,39 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
         }
     }
 
+    async function claimOnce() {
+        const cfg = pelClaim ?? { enabled: true, minIdleMs: 30_000, maxPerTick: 128, intervalMs: 1000 };
+        if (!cfg.enabled || !client.xpending || !client.xclaim) return;
+        try {
+            const pendingEntries = await client.xpending(stream, group, {
+                idle: cfg.minIdleMs,
+                count: cfg.maxPerTick ?? 128,
+                start: "-",
+                end: "+",
+            });
+
+            if (!pendingEntries || pendingEntries.length === 0) return;
+            const ids = pendingEntries.map((p) => p.id);
+            const claimed = await client.xclaim(stream, group, consumer, cfg.minIdleMs, ids, { retrycount: 1 });
+            for (const { id, fields } of claimed) {
+                inFlight++;
+                await processMessage(id, fields);
+                inFlight--;
+            }
+            log.debug("pel-claimed", { count: claimed.length });
+        } catch (err) {
+            log.error("pel-claim error", { err });
+        }
+    }
+
+    async function claimLoop() {
+        const interval = (pelClaim?.intervalMs ?? 1000);
+        while (running) {
+            await claimOnce();
+            await new Promise((r) => setTimeout(r, interval));
+        }
+    }
+
     async function loop() {
 
         while (running) {
@@ -175,11 +216,16 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             await ensureGroup();
             // Fire-and-forget; if you prefer, you can manage the promise outside
             void loop();
+            if (pelClaim?.enabled && client.xpending && client.xclaim) {
+                claimLoopPromise = claimLoop();
+            }
         },
         async stop({drain = true, timeoutMs = 10_000} = {}) {
             if (!running) return;
             if (!drain) {
                 running = false;
+                if (claimLoopPromise) await claimLoopPromise;
+                claimLoopPromise = null;
                 return;
             }
             const deadline = Date.now() + timeoutMs;
