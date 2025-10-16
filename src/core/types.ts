@@ -74,7 +74,7 @@ export interface GlideKitClient {
         streams: { key: string; id: ">" }[]; // we only read new entries in this skeleton
     }) => Promise<XReadGroupResult | null>;
 
-    xinfoGroups: (key: string, options?: {decoder?: Decoder}) => Promise<Record<string, number | string | null>[]>;
+    xinfoGroups: (key: string, options?: { decoder?: Decoder }) => Promise<Record<string, number | string | null>[]>;
 
     xgroupCreate: (
         key: string,
@@ -84,6 +84,26 @@ export interface GlideKitClient {
     ) => Promise<string>;
 
     xlen: (key: string) => Promise<number>;
+
+    xpending?: (
+        key: string,
+        group: string,
+        opts: {
+            idle: number;
+            count: number;
+            start: string;
+            end: string;
+        }
+    ) => Promise<{ id: string; consumer: string }[]>;
+
+    xclaim?: (
+        key: string,
+        group: string,
+        consumer: string,
+        minIdleMs: number,
+        ids: string[],
+        opts?: { retrycount?: number; force?: boolean }
+    ) => Promise<string[]>;
 
     // Optional helpers for retries (ZSET based scheduler)
     zadd?: (

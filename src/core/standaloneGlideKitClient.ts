@@ -1,5 +1,12 @@
 import {Decoder, GlideKitClient, XReadGroupResult} from "./types.js";
-import {GlideClient, GlideClientConfiguration, GlideString} from "@valkey/valkey-glide";
+import {
+    Boundary,
+    GlideClient,
+    GlideClientConfiguration,
+    GlideString,
+    InfBoundary,
+    StreamClaimOptions
+} from "@valkey/valkey-glide";
 
 export class StandaloneGlideKitClient implements GlideKitClient {
 
@@ -135,8 +142,64 @@ export class StandaloneGlideKitClient implements GlideKitClient {
         return result;
     }
 
+    async xpending(
+        key: string,
+        group: string,
+        opts: {
+            idle: number;
+            count: number;
+            start: string;
+            end: string;
+        }
+    ): Promise<{ id: string; consumer: string }[]> {
+        const client = await this.createdClient;
+        const start = this.convertStringToBoundary(opts.start);
+        const end = this.convertStringToBoundary(opts.end);
+        const result = await client.xpendingWithOptions(key, group, {
+            minIdleTime: opts.idle,
+            count: opts.count,
+            start,
+            end
+        });
+        const out: { id: string; consumer: string }[] = [];
+        for (const entry of result) {
+            const id = this.convertGlideString(entry[0]);
+            const consumer = this.convertGlideString(entry[1]);
+            out.push({id, consumer});
+        }
+        return out;
+    }
+
+    async xclaim(key: string,
+                 group: string,
+                 consumer: string,
+                 minIdleMs: number,
+                 ids: string[],
+                 opts?: { retrycount?: number; force?: boolean }): Promise<string[]> {
+        const client = await this.createdClient;
+        const xclaimOpts: StreamClaimOptions | undefined = opts ? {
+            retryCount: opts.retrycount,
+            isForce: opts.force,
+        } : undefined;
+        const result = await client.xclaim(key, group, consumer, minIdleMs, ids, xclaimOpts);
+        return Object.keys(result);
+    }
+
     private convertGlideString(string: GlideString) {
         return Buffer.isBuffer(string) && this.encoding ? string.toString(this.encoding) : string.toString();
+    }
+
+    private convertStringToBoundary(string: string): Boundary<string> {
+        switch (string) {
+            case "-":
+                return InfBoundary.NegativeInfinity
+            case "+":
+                return InfBoundary.PositiveInfinity
+            default:
+                return {
+                    value: string,
+                }
+        }
     }
 
 }

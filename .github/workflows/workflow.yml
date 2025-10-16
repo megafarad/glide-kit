@@ -3,8 +3,13 @@ on:
   push:
     branches:
       - master
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  test:
+  publish:
     runs-on: ubuntu-latest
 
     services:
@@ -31,9 +36,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build
+        run: npm run build
+
       - name: Run tests
         run: npm test
         env:
           VALKEY_HOST: localhost
           VALKEY_PORT: 6379
+
+      - name: Publish
+        run: npm publish
 
