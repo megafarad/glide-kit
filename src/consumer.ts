@@ -185,26 +185,31 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     async function loop() {
 
         while (running) {
-            const res = await client.xreadgroup({
-                group,
-                consumer,
-                blockMs: batch.blockMs,
-                count: batch.count,
-                streams: [{key: stream, id: ">"}],
-            });
+            try {
+                const res = await client.xreadgroup({
+                    group,
+                    consumer,
+                    blockMs: batch.blockMs,
+                    count: batch.count,
+                    streams: [{key: stream, id: ">"}],
+                });
 
-            log.debug("xreadgroup", {stream, group, count: res?.length});
+                log.debug("xreadgroup", {stream, group, count: res?.length});
 
-            if (!res || res.length === 0) continue;
+                if (!res || res.length === 0) continue;
 
-            for (const part of res) {
-                log.debug("xreadgroup.part", {stream, group, count: part.messages.length});
-                for (const msg of part.messages) {
-                    log.debug("xreadgroup.msg", {stream, group, id: msg.id});
-                    inFlight++;
-                    await processMessage(msg.id, msg.fields);
-                    inFlight--;
+                for (const part of res) {
+                    log.debug("xreadgroup.part", {stream, group, count: part.messages.length});
+                    for (const msg of part.messages) {
+                        log.debug("xreadgroup.msg", {stream, group, id: msg.id});
+                        inFlight++;
+                        await processMessage(msg.id, msg.fields);
+                        inFlight--;
+                    }
                 }
+            } catch (err) {
+                log.error("xreadgroup error", {err});
+                await new Promise((r) => setTimeout(r, 250));
             }
         }
     }
@@ -212,8 +217,8 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
     return {
         async start() {
             if (running) return;
-            running = true;
             await ensureGroup();
+            running = true;
             // Fire-and-forget; if you prefer, you can manage the promise outside
             void loop();
             if (pelClaim?.enabled && client.xpending && client.xclaim) {

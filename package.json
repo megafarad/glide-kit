@@ -1,6 +1,6 @@
 {
   "name": "@sirhc77/glide-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A simple library of abstractions for Valkey Glide - batteries included.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,7 +8,7 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/megafarad/glide-kit"
+    "url": "git+https://github.com/megafarad/glide-kit.git"
   },
   "exports": {
     ".": {

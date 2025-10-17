@@ -84,9 +84,22 @@ export function startRetryDaemon(opts: RetryDaemonOpts): RetryDaemon {
         running = true;
         try {
             while (running) {
-                await tickOnce();
+                try {
+                    await tickOnce();
+                } catch (err) {
+                    // Never let the loop die on a single tick failure
+                    log.error("retry-daemon tick error", { err });
+                    // brief backoff to avoid hot error loops
+                    await new Promise((r) => setTimeout(r, 200));
+                }
+
                 const jitter = 1 + (Math.random() * 2 - 1) * jitterPct; // 1±jitterPct
-                await new Promise((r) => setTimeout(r, Math.max(25, tickMs * jitter)));
+                try {
+                    await new Promise((r) => setTimeout(r, Math.max(25, tickMs * jitter)));
+                } catch (sleepErr) {
+                    // setTimeout shouldn't throw, but be defensive
+                    log.warn("retry-daemon sleep interrupted", { err: sleepErr });
+                }
             }
         } finally {
             running = false;
@@ -96,6 +109,7 @@ export function startRetryDaemon(opts: RetryDaemonOpts): RetryDaemon {
     return {
         start() {
             if (loopPromise) return;
+            if (running) return;
             loopPromise = loop();
         },
         async stop() {
