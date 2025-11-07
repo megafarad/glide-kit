@@ -67,7 +67,7 @@ export function startRetryDaemon(opts: RetryDaemonOpts): RetryDaemon {
             return;
         }
 
-        for (const { member } of ready) {
+        for (const { score, member } of ready) {
             try {
                 log.debug("member: ", member);
                 const parsed = JSON.parse(member) as { stream: string; fields: Record<string, string> };
@@ -76,6 +76,7 @@ export function startRetryDaemon(opts: RetryDaemonOpts): RetryDaemon {
                 log.debug("retry->xadd", { dest });
             } catch (err) {
                 log.error("retry-daemon parse/enqueue error", { err });
+                await client.zadd?.(retryZset, [{ score, member }]);
             }
         }
     }

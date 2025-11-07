@@ -67,7 +67,7 @@ await producer.send({ to: "a@b.com", subject: "hi", body: "…" }, { key: "a@b.c
 ### 3) Consume + handle retries/DLQ automatically
 
 ```ts
-import { makeConsumer, backoffPolicy } from "@sirhc77/glide-kit";;
+import { makeConsumer, backoffPolicy } from "@sirhc77/glide-kit";
 
 const worker = makeConsumer<EmailJob>({
   client,
