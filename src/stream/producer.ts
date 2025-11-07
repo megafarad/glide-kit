@@ -1,7 +1,7 @@
-import {Codec, Envelope, IdempotencyCache, MessageHeaders, GlideKitClient, LoggerLike} from "./core/types.js";
+import {Codec, Envelope, IdempotencyCache, MessageHeaders, IGlideKitClient, LoggerLike} from "../core/types";
 
 export type MakeProducerOpts<T> = {
-    client: GlideKitClient;
+    client: IGlideKitClient;
     stream: string;
     codec: Codec<T>;
     defaultType?: string;

@@ -57,7 +57,7 @@ export enum Decoder {
     String = 1
 }
 
-export interface GlideKitClient {
+export interface IGlideKitClient {
     xadd: (
         stream: string,
         fields: Record<string, string>,

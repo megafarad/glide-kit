@@ -1,4 +1,4 @@
-import { MessageHeaders, RetryPolicy, RetryResult } from "./core/types.js";
+import { MessageHeaders, RetryPolicy, RetryResult } from "../core/types";
 
 export type BackoffStrategy =
     | { kind: "constant"; delayMs: number }

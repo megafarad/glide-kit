@@ -1,19 +1,16 @@
-import {Decoder, GlideKitClient, XReadGroupResult} from "./types.js";
+import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
 import {
     Boundary,
-    GlideClient,
-    GlideClientConfiguration,
+    BaseClient,
     GlideString,
     InfBoundary,
     StreamClaimOptions
 } from "@valkey/valkey-glide";
 
-export class StandaloneGlideKitClient implements GlideKitClient {
+export class GlideKitClient implements IGlideKitClient {
 
-    private readonly createdClient: Promise<GlideClient>;
+    constructor(private readonly createdClient: Promise<BaseClient>, private encoding?: BufferEncoding) {
 
-    constructor(config: GlideClientConfiguration, private encoding?: BufferEncoding) {
-        this.createdClient = GlideClient.createClient(config)
     }
 
     async xack(stream: string, group: string, ids: string[]): Promise<number> {

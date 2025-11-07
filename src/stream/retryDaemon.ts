@@ -1,7 +1,7 @@
-import { GlideKitClient } from "../core/types.js";
+import { IGlideKitClient } from "../core/types.js";
 
 export type RetryDaemonOpts = {
-    client: GlideKitClient;
+    client: IGlideKitClient;
     retryZset: string;        // e.g., orders:retry
     targetStream: string;     // e.g., orders
     maxBatch?: number;        // how many to move per tick

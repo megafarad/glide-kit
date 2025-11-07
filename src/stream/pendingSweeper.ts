@@ -1,7 +1,7 @@
-import {GlideKitClient} from "../core/types.js";
+import {IGlideKitClient} from "../core/types.js";
 
 export type PendingSweeperOpts = {
-    client: GlideKitClient;
+    client: IGlideKitClient;
     stream: string;
     group: string;
     consumer: string;            // who will claim

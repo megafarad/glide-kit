@@ -4,9 +4,9 @@ import {
     LoggerLike,
     RetryPolicy,
     RetryResult,
-    GlideKitClient,
+    IGlideKitClient,
     noopLogger,
-} from "./core/types.js";
+} from "../core/types";
 
 export type Handler<T> = (
     payload: T,
@@ -14,7 +14,7 @@ export type Handler<T> = (
 ) => Promise<RetryResult | void>;
 
 export type MakeConsumerOpts<T> = {
-    client: GlideKitClient;
+    client: IGlideKitClient;
     stream: string;
     group: string;
     consumer: string;

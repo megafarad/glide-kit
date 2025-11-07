@@ -5,10 +5,11 @@ import {
     makeConsumer,
     makeProducer,
     startRetryDaemon,
-    StandaloneGlideKitClient
+    GlideKitClient
 } from "../src";
 import dotenv from "dotenv";
 import {expect} from "vitest";
+import {GlideClient} from "@valkey/valkey-glide";
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ describe('Integration', async () => {
     if (!process.env.VALKEY_HOST) throw new Error("VALKEY_HOST not set");
     if (!process.env.VALKEY_PORT) throw new Error("VALKEY_PORT not set");
 
-    const client = new StandaloneGlideKitClient({
+    const glideClient = GlideClient.createClient({
         addresses: [
             {
                 host: process.env.VALKEY_HOST,
@@ -30,6 +31,8 @@ describe('Integration', async () => {
         ],
         requestTimeout: 10_000,
     });
+
+    const client = new GlideKitClient(glideClient);
 
     it('should work end-to-end', async () => {
 
