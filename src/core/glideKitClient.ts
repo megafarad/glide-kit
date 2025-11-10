@@ -1,4 +1,4 @@
-import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
+import {ConditionalSet, Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
 import {
     Boundary,
     BaseClient,
@@ -36,10 +36,10 @@ export class GlideKitClient implements IGlideKitClient {
         return await client.invokeScript(script, options);
     }
 
-    async setNx(key: string, value: string, ttlSec?: number): Promise<string | null> {
+    async set(key: string, value: string, ttlSec?: number, conditionalSet?: ConditionalSet): Promise<string | null> {
         const client = await this.createdClient;
         const expiry = ttlSec ? {type: TimeUnit.Seconds, count: ttlSec} : undefined;
-        const result = await client.set(key, value, {conditionalSet: "onlyIfDoesNotExist", expiry});
+        const result = await client.set(key, value, {conditionalSet, expiry});
         if (result) {
             return this.convertGlideString(result);
         } else {

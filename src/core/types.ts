@@ -59,6 +59,11 @@ export enum Decoder {
     String = 1
 }
 
+export enum ConditionalSet {
+    NX = "onlyIfDoesNotExist",
+    EX = "onlyIfExists",
+}
+
 export interface IGlideKitClient {
 
     del: (key: string) => Promise<number>;
@@ -72,7 +77,7 @@ export interface IGlideKitClient {
             args?: string[];
         }) => Promise<GlideReturnType>;
 
-    setNx: (key: string, value: string, ttlSec?: number) => Promise<string | null>;
+    set: (key: string, value: string, ttlSec?: number, conditionalSet?: ConditionalSet) => Promise<string | null>;
 
     xadd: (
         stream: string,

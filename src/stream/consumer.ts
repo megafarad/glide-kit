@@ -1,11 +1,12 @@
 import {
     Codec,
+    ConditionalSet,
     Envelope,
+    IGlideKitClient,
     LoggerLike,
+    noopLogger,
     RetryPolicy,
     RetryResult,
-    IGlideKitClient,
-    noopLogger,
 } from "../core/types";
 
 export type Handler<T> = (
@@ -81,12 +82,11 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
         try {
             if (idempotencyKey) {
-                const ok = await client.setNx(idempotencyKey, `PENDING:${consumer}`,
-                    opts.idempotency?.pendingTtlSec);
+                const ok = await client.set(idempotencyKey, `PENDING:${consumer}`,
+                    opts.idempotency?.pendingTtlSec, ConditionalSet.NX);
 
                 if (ok !== 'OK') {
                     const value = await client.get(idempotencyKey);
-                    log.debug("idempotency: not reserved", {idempotencyKey, value});
                     if (value === 'DONE') {
                         log.debug("idempotency: already done", {idempotencyKey});
                         await client.xack(stream, group, [id]);
@@ -111,7 +111,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             if (res.action === "ack") {
                 await client.xack(stream, group, [id]);
                 if (idempotencyKey) {
-                    await client.setNx(idempotencyKey, 'DONE', opts.idempotency?.doneTtlSec);
+                    await client.set(idempotencyKey, 'DONE', opts.idempotency?.doneTtlSec);
                     log.debug("idempotency: done", {idempotencyKey});
                 }
                 log.debug("ack", {stream, group, id, type: env.headers.type});
