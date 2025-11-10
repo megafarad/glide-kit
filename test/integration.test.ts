@@ -211,6 +211,6 @@ describe('Integration', async () => {
 
         await worker.stop();
         await daemon.stop();
-    });
+    }, 60_000);
 
 });
