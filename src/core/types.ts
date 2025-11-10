@@ -61,12 +61,18 @@ export enum Decoder {
 
 export interface IGlideKitClient {
 
+    del: (key: string) => Promise<number>;
+
+    get: (key: string) => Promise<string | null>;
+
     invokeScript: (
         script: Script,
         options?: {
             keys?: string[];
             args?: string[];
         }) => Promise<GlideReturnType>;
+
+    setNx: (key: string, value: string, ttlSec?: number) => Promise<string | null>;
 
     xadd: (
         stream: string,

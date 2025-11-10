@@ -4,7 +4,7 @@ import {
     BaseClient,
     GlideString,
     InfBoundary,
-    StreamClaimOptions, GlideReturnType, Script
+    StreamClaimOptions, GlideReturnType, Script, TimeUnit
 } from "@valkey/valkey-glide";
 
 export class GlideKitClient implements IGlideKitClient {
@@ -13,12 +13,38 @@ export class GlideKitClient implements IGlideKitClient {
 
     }
 
+    async del(key: string): Promise<number> {
+        const client = await this.createdClient;
+        return client.del([key]);
+    }
+
+    async get(key: string): Promise<string | null> {
+        const client = await this.createdClient;
+        const result = await client.get(key);
+        if (result) {
+            return this.convertGlideString(result);
+        } else {
+            return null;
+        }
+    }
+
     async invokeScript(script: Script, options?: {
         keys?: string[];
         args?: string[];
     }): Promise<GlideReturnType> {
         const client = await this.createdClient;
         return await client.invokeScript(script, options);
+    }
+
+    async setNx(key: string, value: string, ttlSec?: number): Promise<string | null> {
+        const client = await this.createdClient;
+        const expiry = ttlSec ? {type: TimeUnit.Seconds, count: ttlSec} : undefined;
+        const result = await client.set(key, value, {conditionalSet: "onlyIfDoesNotExist", expiry});
+        if (result) {
+            return this.convertGlideString(result);
+        } else {
+            return null;
+        }
     }
 
     async xack(stream: string, group: string, ids: string[]): Promise<number> {
