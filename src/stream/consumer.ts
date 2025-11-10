@@ -84,6 +84,8 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                 const ok = await client.setNx(idempotencyKey, `PENDING:${consumer}`,
                     opts.idempotency?.pendingTtlSec);
 
+                console.debug("idempotency: setnx", {idempotencyKey, ok});
+
                 if (ok !== 'OK') {
                     const value = await client.get(idempotencyKey);
                     if (value === 'DONE') {
@@ -110,7 +112,7 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             if (res.action === "ack") {
                 await client.xack(stream, group, [id]);
                 if (idempotencyKey) {
-                    await client.setNx(idempotencyKey, `DONE`, opts.idempotency?.doneTtlSec);
+                    await client.setNx(idempotencyKey, 'DONE', opts.idempotency?.doneTtlSec);
                     log.debug("idempotency: done", {idempotencyKey});
                 }
                 log.debug("ack", {stream, group, id, type: env.headers.type});
