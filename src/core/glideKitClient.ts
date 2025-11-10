@@ -4,13 +4,21 @@ import {
     BaseClient,
     GlideString,
     InfBoundary,
-    StreamClaimOptions
+    StreamClaimOptions, GlideReturnType, Script
 } from "@valkey/valkey-glide";
 
 export class GlideKitClient implements IGlideKitClient {
 
     constructor(private readonly createdClient: Promise<BaseClient>, private encoding?: BufferEncoding) {
 
+    }
+
+    async invokeScript(script: Script, options?: {
+        keys?: string[];
+        args?: string[];
+    }): Promise<GlideReturnType> {
+        const client = await this.createdClient;
+        return await client.invokeScript(script, options);
     }
 
     async xack(stream: string, group: string, ids: string[]): Promise<number> {
@@ -174,7 +182,10 @@ export class GlideKitClient implements IGlideKitClient {
                  consumer: string,
                  minIdleMs: number,
                  ids: string[],
-                 opts?: { retrycount?: number; force?: boolean }): Promise<Array<{ id: string; fields: Record<string, string> }>> {
+                 opts?: { retrycount?: number; force?: boolean }): Promise<Array<{
+        id: string;
+        fields: Record<string, string>
+    }>> {
         const client = await this.createdClient;
         const xclaimOpts: StreamClaimOptions | undefined = opts ? {
             retryCount: opts.retrycount,
