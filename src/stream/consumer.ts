@@ -84,10 +84,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                 const ok = await client.setNx(idempotencyKey, `PENDING:${consumer}`,
                     opts.idempotency?.pendingTtlSec);
 
-                console.debug("idempotency: setnx", {idempotencyKey, ok});
-
                 if (ok !== 'OK') {
                     const value = await client.get(idempotencyKey);
+                    log.debug("idempotency: not reserved", {idempotencyKey, value});
                     if (value === 'DONE') {
                         log.debug("idempotency: already done", {idempotencyKey});
                         await client.xack(stream, group, [id]);
