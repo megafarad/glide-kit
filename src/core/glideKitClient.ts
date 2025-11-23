@@ -1,16 +1,50 @@
-import {Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
+import {ConditionalSet, Decoder, IGlideKitClient, XReadGroupResult} from "./types.js";
 import {
     Boundary,
     BaseClient,
     GlideString,
     InfBoundary,
-    StreamClaimOptions
+    StreamClaimOptions, GlideReturnType, Script, TimeUnit
 } from "@valkey/valkey-glide";
 
 export class GlideKitClient implements IGlideKitClient {
 
     constructor(private readonly createdClient: Promise<BaseClient>, private encoding?: BufferEncoding) {
 
+    }
+
+    async del(key: string): Promise<number> {
+        const client = await this.createdClient;
+        return client.del([key]);
+    }
+
+    async get(key: string): Promise<string | null> {
+        const client = await this.createdClient;
+        const result = await client.get(key);
+        if (result) {
+            return this.convertGlideString(result);
+        } else {
+            return null;
+        }
+    }
+
+    async invokeScript(script: Script, options?: {
+        keys?: string[];
+        args?: string[];
+    }): Promise<GlideReturnType> {
+        const client = await this.createdClient;
+        return await client.invokeScript(script, options);
+    }
+
+    async set(key: string, value: string, ttlSec?: number, conditionalSet?: ConditionalSet): Promise<string | null> {
+        const client = await this.createdClient;
+        const expiry = ttlSec ? {type: TimeUnit.Seconds, count: ttlSec} : undefined;
+        const result = await client.set(key, value, {conditionalSet, expiry});
+        if (result) {
+            return this.convertGlideString(result);
+        } else {
+            return null;
+        }
     }
 
     async xack(stream: string, group: string, ids: string[]): Promise<number> {
@@ -174,7 +208,10 @@ export class GlideKitClient implements IGlideKitClient {
                  consumer: string,
                  minIdleMs: number,
                  ids: string[],
-                 opts?: { retrycount?: number; force?: boolean }): Promise<Array<{ id: string; fields: Record<string, string> }>> {
+                 opts?: { retrycount?: number; force?: boolean }): Promise<Array<{
+        id: string;
+        fields: Record<string, string>
+    }>> {
         const client = await this.createdClient;
         const xclaimOpts: StreamClaimOptions | undefined = opts ? {
             retryCount: opts.retrycount,

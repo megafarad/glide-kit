@@ -1,11 +1,12 @@
 import {
     Codec,
+    ConditionalSet,
     Envelope,
+    IGlideKitClient,
     LoggerLike,
+    noopLogger,
     RetryPolicy,
     RetryResult,
-    IGlideKitClient,
-    noopLogger,
 } from "../core/types";
 
 export type Handler<T> = (
@@ -24,6 +25,7 @@ export type MakeConsumerOpts<T> = {
     scheduling?: { mode: "zset" | "none"; retryZset?: string };
     batch?: { count: number; blockMs: number };
     log?: LoggerLike;
+    idempotency?: { pendingTtlSec: number, doneTtlSec: number }
     pelClaim?: {
         enabled?: boolean;        // default true
         minIdleMs: number;        // older than this is eligible
@@ -72,8 +74,32 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
     async function processMessage(id: string, fields: Record<string, string>) {
         log.debug("processMessage", {stream, group, id, type: fields.headers_type});
+        const env = codec.decode(fields);
+        const idempotencyKey = opts.idempotency?.pendingTtlSec && env.headers.key ?
+            `consumed:${stream}:${env.headers.key}` : undefined;
+
+        let reservedByUs = false;
+
         try {
-            const env = codec.decode(fields);
+            if (idempotencyKey) {
+                const ok = await client.set(idempotencyKey, `PENDING:${consumer}`,
+                    opts.idempotency?.pendingTtlSec, ConditionalSet.NX);
+
+                if (ok !== 'OK') {
+                    const value = await client.get(idempotencyKey);
+                    if (value === 'DONE') {
+                        log.debug("idempotency: already done", {idempotencyKey});
+                        await client.xack(stream, group, [id]);
+                        return;
+                    }
+
+                    await client.xack(stream, group, [id]);
+                    await client.zadd?.(`${stream}:retry`, [{score: Date.now() + 500, member: JSON.stringify({stream, fields})}]);
+                    return;
+                }
+                reservedByUs = true;
+            }
+
             const handlerResult = await handler(env.payload, {headers: env.headers, id})
                 .catch((e) => {
                     return retryPolicy.next(env.headers, e);
@@ -84,11 +110,19 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
 
             if (res.action === "ack") {
                 await client.xack(stream, group, [id]);
+                if (idempotencyKey) {
+                    await client.set(idempotencyKey, 'DONE', opts.idempotency?.doneTtlSec);
+                    log.debug("idempotency: done", {idempotencyKey});
+                }
                 log.debug("ack", {stream, group, id, type: env.headers.type});
                 return;
             }
 
             if (res.action === "retry") {
+                if (reservedByUs && idempotencyKey) {
+                    await client.del(idempotencyKey);
+                }
+
                 const delay = res.delayMs ?? 0;
                 // Strategy: re-enqueue with attempt+1, then ack original
                 const nextEnv: Envelope<T> = {
@@ -124,6 +158,10 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
             }
 
             if (res.action === "dlq") {
+                if (reservedByUs && idempotencyKey) {
+                    await client.del(idempotencyKey);
+                }
+
                 const dlqStream = `${stream}:dlq`;
                 const dlqPayload = {
                     headers: {...env.headers},
@@ -142,6 +180,9 @@ export function makeConsumer<T>(opts: MakeConsumerOpts<T>): ConsumerWorker<T> {
                 return;
             }
         } catch (err) {
+            if (reservedByUs && idempotencyKey) {
+                await client.del(idempotencyKey);
+            }
             // Last-chance handler error → schedule retry with policy based on a synthetic envelope
             log.error("handler exception", {stream, group, id, err});
             // Naive: ack to avoid tight loop; caller should rely on idle sweeper for robustness

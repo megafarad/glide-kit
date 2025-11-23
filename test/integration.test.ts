@@ -153,4 +153,128 @@ describe('Integration', async () => {
 
     }, 60_000);
 
+    it('should respect the producer idempotency key', async () => {
+        const testFn = vi.fn((_job: TestJob) => Promise.resolve());
+        testFn.mockResolvedValue()
+
+        const producer = makeProducer<TestJob>({
+            client,
+            stream: "test",
+            codec: jsonCodec<TestJob>(),
+            defaultType: "test.set",
+            log: consoleLogger,
+            idempotency: {ttlSec: 86400 }
+        });
+
+        const worker = makeConsumer<TestJob>({
+            client,
+            stream: 'test',
+            group: 'test:svc',
+            consumer: `c-${Math.random().toString(36).slice(2)}`,
+            codec: jsonCodec<TestJob>(),
+            retryPolicy: backoffPolicy({
+                maxAttempts: 5,
+                strategy: {kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
+            }),
+            handler: async (job) => {
+                await testFn(job);
+            },
+            log: consoleLogger
+        });
+
+        const job: TestJob = {value: "hello world"};
+
+        await worker.start().then(() => {
+            console.log("worker started");
+        });
+
+        const daemon = startRetryDaemon({
+            client,
+            retryZset: "test:retry",
+            targetStream: "test",
+            log: consoleLogger
+        });
+
+        daemon.start();
+
+        await producer.send(job, {key: '123456'}).then(() => {
+            console.log("job sent");
+        });
+
+        await producer.send(job, {key: '123456'}).then(() => {
+            console.log("job sent again");
+        });
+
+        await new Promise((r) => setTimeout(r, 5000));
+
+        await expect.poll(async () => testFn, {timeout: 30_000}).toBeCalledTimes(1);
+
+        await worker.stop();
+        await daemon.stop();
+    }, 60_000);
+
+    it('should respect the consumer idempotency key', async () => {
+        const testFn = vi.fn((_job: TestJob) => Promise.resolve());
+        testFn.mockResolvedValue();
+
+        const producer = makeProducer<TestJob>({
+            client,
+            stream: "test",
+            codec: jsonCodec<TestJob>(),
+            defaultType: "test.set",
+            log: consoleLogger
+        });
+
+        const job: TestJob = {value: "hello world"};
+
+        const worker = makeConsumer({
+            client,
+            stream: 'test',
+            group: 'test:svc',
+            consumer: `c-${Math.random().toString(36).slice(2)}`,
+            codec: jsonCodec<TestJob>(),
+            retryPolicy: backoffPolicy({
+                maxAttempts: 5,
+                strategy: {kind: 'exponential-jitter', baseMs: 250, maxDelayMs: 60_000}
+            }),
+            handler: async (job) => {
+                await testFn(job);
+            },
+            log: consoleLogger,
+            idempotency: {
+                pendingTtlSec: 300,
+                doneTtlSec: 86400
+            }
+        });
+
+        await worker.start().then(() => {
+            console.log("worker started");
+        });
+
+        const daemon = startRetryDaemon({
+            client,
+            retryZset: "test:retry",
+            targetStream: "test",
+            log: consoleLogger
+        });
+
+        daemon.start();
+
+        await producer.send(job, {key: '123456'}).then(() => {
+            console.log("job sent");
+        });
+
+        await producer.send(job, {key: '123456'}).then(() => {
+            console.log("job sent again");
+        });
+
+        await new Promise((r) => setTimeout(r, 5000));
+
+        await expect.poll(async () => testFn, {timeout: 30_000}).toBeCalledTimes(1);
+
+        await worker.stop();
+        await daemon.stop();
+
+    }, 60_000);
+
 });

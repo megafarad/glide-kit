@@ -1,3 +1,5 @@
+import {GlideReturnType, Script} from "@valkey/valkey-glide";
+
 export type Millis = number;
 
 export type MessageHeaders = {
@@ -57,7 +59,26 @@ export enum Decoder {
     String = 1
 }
 
+export enum ConditionalSet {
+    NX = "onlyIfDoesNotExist",
+    EX = "onlyIfExists",
+}
+
 export interface IGlideKitClient {
+
+    del: (key: string) => Promise<number>;
+
+    get: (key: string) => Promise<string | null>;
+
+    invokeScript: (
+        script: Script,
+        options?: {
+            keys?: string[];
+            args?: string[];
+        }) => Promise<GlideReturnType>;
+
+    set: (key: string, value: string, ttlSec?: number, conditionalSet?: ConditionalSet) => Promise<string | null>;
+
     xadd: (
         stream: string,
         fields: Record<string, string>,
@@ -118,13 +139,6 @@ export interface IGlideKitClient {
     zrem?: (key: string, members: string[]) => Promise<number>;
 
 }
-
-export type IdempotencyCache = {
-    setIfNotExists: (
-        key: string,
-        ttlSeconds: number
-    ) => Promise<boolean>; // true if set, false if already present
-};
 
 export type XReadGroupResult = Array<{
     stream: string;
